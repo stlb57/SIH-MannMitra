@@ -22,4 +22,5 @@ jobs:
           application_name: "MannMitra"           # ⚠️ Your EB Application Name
           environment_name: "Mannmitra-env"     # ⚠️ Your EB Environment Name
           region: "us-east-1"                   # ⚠️ Your AWS Region
+          version_label: "${{ github.sha }}-${{ github.run_number }}"
           deployment_package: deploy.zip
