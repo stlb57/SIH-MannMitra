@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat with Mitra</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/feather-icons"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0b1120; color: #e2e8f0; }
+        #messages-area::-webkit-scrollbar { width: 8px; }
+        #messages-area::-webkit-scrollbar-track { background: transparent; }
+        #messages-area::-webkit-scrollbar-thumb { background: #4B5563; border-radius: 4px; }
+        .bot-bubble { background-color: rgba(29, 39, 58, 0.5); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+    </style>
+</head>
+<body class="flex flex-col h-screen p-4 antialiased">
+    <div class="w-full max-w-4xl mx-auto flex flex-col h-full">
+        <header class="flex-shrink-0 flex justify-between items-center py-2">
+            <h1 class="text-3xl font-bold text-purple-400">MannMitra</h1>
+            <a href="index.html" class="text-gray-400 hover:text-white transition-colors">&larr; Back to Dashboard</a>
+        </header>
+
+        <div class="flex items-center gap-4 py-4 border-b border-white/10">
+            <div class="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center">
+                <i data-feather="message-square" class="text-purple-400"></i>
+            </div>
+            <div>
+                <h2 class="text-xl font-semibold">Chat with Mitra</h2>
+                <p class="text-sm text-gray-400">Your AI companion for Mental Wellness</p>
+            </div>
+        </div>
+
+        <div id="messages-area" class="flex-grow overflow-y-auto space-y-6 py-6">
+            <div class="flex items-end gap-3">
+                <div class="w-8 h-8 rounded-full bg-slate-800 flex-shrink-0"></div>
+                <div class="bot-bubble p-3 rounded-2xl rounded-bl-none max-w-lg">
+                    <p>Hello! Feel free to share what's on your mind today.</p>
+                </div>
+            </div>
+        </div>
+
+        <form id="chat-form" class="mt-auto flex-shrink-0 flex items-center gap-3 bg-slate-900/70 p-2 rounded-full border border-white/10 focus-within:border-purple-400 transition backdrop-blur-sm">
+            <input id="chat-input" type="text" class="flex-grow bg-transparent focus:outline-none px-4" placeholder="Type something..." autocomplete="off">
+            <button type="submit" class="bg-emerald-500 p-3 rounded-full text-white hover:bg-emerald-600 transition">
+                <i data-feather="send" class="w-5 h-5"></i>
+            </button>
+        </form>
+    </div>
+    
+    <script>
+        feather.replace();
+        const chatForm = document.getElementById('chat-form');
+        const chatInput = document.getElementById('chat-input');
+        const messagesArea = document.getElementById('messages-area');
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const response = await fetch('http://127.0.0.1:5000/@me', { credentials: 'include' });
+                if (!response.ok) window.location.href = 'login.html';
+            } catch (error) {
+                window.location.href = 'login.html';
+            }
+        });
+
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const userText = chatInput.value;
+            if (!userText.trim()) return;
+            
+            appendMessage(userText, 'user');
+            chatInput.value = '';
+            showTypingIndicator();
+
+            try {
+                const chatResponse = await fetch('http://127.0.0.1:5000/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: userText }),
+                    credentials: 'include'
+                });
+                const chatData = await chatResponse.json();
+                
+                removeTypingIndicator();
+                appendMessage(chatData.reply, 'bot');
+                analyzeAndStoreInDB(userText);
+
+            } catch (error) {
+                console.error("Chat API Error:", error);
+                removeTypingIndicator();
+                appendMessage("Sorry, I'm having trouble connecting right now.", 'bot');
+            }
+        });
+
+        async function analyzeAndStoreInDB(text) {
+            try {
+                await fetch('http://127.0.0.1:5000/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text }),
+                    credentials: 'include'
+                });
+            } catch (error) {
+                console.error("Analysis API Error:", error);
+            }
+        }
+
+        function appendMessage(text, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `flex items-end gap-3 ${type === 'user' ? 'justify-end' : ''}`;
+            
+            const avatarHTML = `<div class="w-8 h-8 rounded-full bg-slate-800 flex-shrink-0"></div>`;
+            const bubbleHTML = `<div class="p-3 rounded-2xl max-w-lg ${type === 'user' ? 'bg-gradient-to-br from-purple-600 to-violet-600 text-white rounded-br-none' : 'bot-bubble rounded-bl-none'}">${text}</div>`;
+            
+            messageDiv.innerHTML = type === 'user' ? bubbleHTML + avatarHTML : avatarHTML + bubbleHTML;
+            messagesArea.appendChild(messageDiv);
+            messagesArea.scrollTop = messagesArea.scrollHeight;
+        }
+
+        function showTypingIndicator() {
+            const indicatorDiv = document.createElement('div');
+            indicatorDiv.id = 'typing-indicator';
+            indicatorDiv.className = 'flex items-end gap-3';
+            indicatorDiv.innerHTML = `<div class="w-8 h-8 rounded-full bg-slate-800 flex-shrink-0"></div><div class="bot-bubble p-3 rounded-2xl rounded-bl-none"><div class="flex items-center space-x-1"><div class="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div><div class="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style="animation-delay: 0.2s;"></div><div class="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style="animation-delay: 0.4s;"></div></div></div>`;
+            messagesArea.appendChild(indicatorDiv);
+            messagesArea.scrollTop = messagesArea.scrollHeight;
+        }
+
+        function removeTypingIndicator() {
+            const indicator = document.getElementById('typing-indicator');
+            if (indicator) indicator.remove();
+        }
+    </script>
+</body>
+</html>

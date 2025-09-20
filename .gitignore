@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+venv/
+*.pyc
+
+# Environment variables
+.env
+
+# Large model files (we'll store these in S3)
+models/
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Journey & Rewards</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style> 
+        body { font-family: 'Inter', sans-serif; background-color: #0b1120; color: #e2e8f0; } 
+        .aurora-background { position: fixed; top: 0; left: 0; right: 0; bottom: 0; overflow: hidden; z-index: -1; }
+        .aurora-background::before, .aurora-background::after { content: ''; position: absolute; top: 50%; left: 50%; width: 800px; height: 800px; border-radius: 50%; filter: blur(150px); opacity: 0.15; animation: move-glow 20s linear infinite; }
+        .aurora-background::before { background: radial-gradient(circle, #581c87, transparent 60%); }
+        .aurora-background::after { background: radial-gradient(circle, #155e75, transparent 60%); animation-delay: -10s; }
+        @keyframes move-glow { 0% { transform: translate(-50%, -50%) rotate(0deg) translateX(30%); } 50% { transform: translate(-50%, -50%) rotate(180deg) translateX(30%); } 100% { transform: translate(-50%, -50%) rotate(360deg) translateX(30%); } }
+        .card { background-color: rgba(29, 39, 58, 0.5); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .reward-item .icon { transition: all 0.3s ease-in-out; }
+        .reward-item:hover .icon { transform: scale(1.1) rotate(-5deg); }
+    </style>
+</head>
+<body class="p-4 md:p-8 antialiased">
+    <div class="aurora-background"></div>
+    <div class="max-w-6xl mx-auto">
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold">Your Journey & Rewards</h1>
+            <a href="index.html" class="text-gray-400 hover:text-white transition-colors">&larr; Back to Dashboard</a>
+        </header>
+        <main class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div class="card p-6 rounded-2xl">
+                <h2 class="text-xl font-semibold mb-6">Milestone Badges</h2>
+                <div id="badges-container" class="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-8 text-center">
+                    </div>
+            </div>
+            <div class="card p-6 rounded-2xl">
+                 <h2 class="text-xl font-semibold mb-6">Virtual Trophies</h2>
+                 <div id="trophies-container" class="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-8 text-center">
+                    </div>
+            </div>
+        </main>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const badgesContainer = document.getElementById('badges-container');
+            const trophiesContainer = document.getElementById('trophies-container');
+
+            try {
+                const response = await fetch('http://127.0.0.1:5000/get_my_activity_stats', { credentials: 'include' });
+                if (!response.ok) {
+                     if (response.status === 401) window.location.href = 'login.html';
+                     throw new Error("Could not fetch stats");
+                }
+                const stats = await response.json();
+                const chatCount = stats.chat_count || 0;
+                const checkinCount = stats.checkin_count || 0;
+                
+                const badges = [
+                    { name: "First Step", icon: "🌟", unlocked: chatCount >= 1, description: "Start your first chat" },
+                    { name: "Mindful Moment", icon: "🧘", unlocked: checkinCount >= 1,  description: "Complete your first check-in" },
+                    { name: "Deep Thinker", icon: "💬", unlocked: chatCount >= 5,  description: "Have 5 conversations" },
+                    { name: "Consistent Soul", icon: "📅", unlocked: checkinCount >= 5,  description: "Complete 5 check-ins" },
+                    { name: "Explorer", icon: "🗺️", unlocked: chatCount >= 10, description: "Have 10 conversations" },
+                    { name: "Habit Builder", icon: "🌱", unlocked: checkinCount >= 10, description: "Complete 10 check-ins" },
+                    { name: "Dedicated", icon: "🤝", unlocked: chatCount >= 5 && checkinCount >= 5, description: "5 chats & 5 check-ins" },
+                    { name: "Veteran", icon: "🛡️", unlocked: chatCount >= 25, description: "Have 25 conversations" }
+                ];
+
+                const trophies = [
+                    { name: "Chat Champion", icon: "🏆", unlocked: chatCount >= 50, description: "Reach 50 conversations" },
+                    { name: "Wellness Guru", icon: "🥇", unlocked: checkinCount >= 50, description: "Reach 50 check-ins" },
+                    { name: "Pathfinder", icon: "🧭", unlocked: chatCount >= 25 && checkinCount >= 25, description: "25 chats & 25 check-ins" },
+                    { name: "MannMitra Master", icon: "👑", unlocked: chatCount >= 100 && checkinCount >= 100, description: "A true master of self-reflection" }
+                ];
+                
+                const renderItems = (items, container) => {
+                    container.innerHTML = items.map(item => `
+                        <div class="flex flex-col items-center reward-item">
+                            <div class="icon w-24 h-24 rounded-full flex items-center justify-center text-5xl transition-all ${item.unlocked ? 'bg-emerald-500/20 border-2 border-emerald-500 shadow-lg shadow-emerald-500/20' : 'bg-slate-800/50 border border-white/10'}">
+                                ${item.unlocked ? item.icon : '❓'}
+                            </div>
+                            <p class="text-sm mt-3 font-semibold ${item.unlocked ? 'text-white' : 'text-gray-500'}">${item.name}</p>
+                            <p class="text-xs mt-1 ${item.unlocked ? 'text-gray-400' : 'text-gray-600'}">${item.description}</p>
+                        </div>
+                    `).join('');
+                };
+
+                renderItems(badges, badgesContainer);
+                renderItems(trophies, trophiesContainer);
+
+            } catch (error) {
+                console.error("Failed to load rewards:", error);
+                badgesContainer.innerHTML = `<p class="text-red-400 col-span-4">Could not load rewards.</p>`;
+                trophiesContainer.innerHTML = `<p class="text-red-400 col-span-4">Could not load rewards.</p>`;
+            }
+        });
+    </script>
+</body>
+</html>

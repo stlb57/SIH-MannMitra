@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nearby Doctors - MannMitra</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/feather-icons"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0b1120; color: #e2e8f0; }
+        .aurora-background { position: fixed; top: 0; left: 0; right: 0; bottom: 0; overflow: hidden; z-index: -1; }
+        .aurora-background::before, .aurora-background::after { content: ''; position: absolute; top: 50%; left: 50%; width: 800px; height: 800px; border-radius: 50%; filter: blur(150px); opacity: 0.15; animation: move-glow 20s linear infinite; }
+        .aurora-background::before { background: radial-gradient(circle, #581c87, transparent 60%); }
+        .aurora-background::after { background: radial-gradient(circle, #155e75, transparent 60%); animation-delay: -10s; }
+        @keyframes move-glow { 0% { transform: translate(-50%, -50%) rotate(0deg) translateX(30%); } 50% { transform: translate(-50%, -50%) rotate(180deg) translateX(30%); } 100% { transform: translate(-50%, -50%) rotate(360deg) translateX(30%); } }
+        .doctor-card { background-color: rgba(29, 39, 58, 0.5); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 1.5rem; padding: 1.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s; }
+        .doctor-card:hover { transform: translateY(-5px); }
+        .btn-call { background-color: #34D399; color: #1F2937; border-radius: 9999px; padding: 0.5rem 1.25rem; font-weight: 600; transition: background-color 0.2s; border: none; cursor: pointer; }
+        .btn-call:hover { background-color: #10B981; }
+    </style>
+</head>
+<body class="min-h-screen p-4 antialiased">
+    <div class="aurora-background"></div>
+    <header class="w-full max-w-7xl mx-auto flex justify-between items-center py-4">
+        <div>
+            <h1 class="text-3xl font-bold text-purple-400">MannMitra</h1>
+            <p class="text-lg text-gray-400">Connect with a Professional</p>
+        </div>
+        <a href="index.html" class="bg-slate-800/50 text-white font-semibold py-2 px-6 rounded-full hover:bg-slate-700/50 no-underline backdrop-blur-sm border border-white/10">
+            <i data-feather="arrow-left" class="inline-block -ml-1 mr-2 h-5 w-5"></i>Back to Dashboard
+        </a>
+    </header>
+
+    <main class="w-full max-w-7xl mx-auto mt-6">
+        <div id="doctors-list-container" class="space-y-6">
+            <p id="loading-text" class="text-center text-gray-400 text-lg">Finding nearby doctors...</p>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            feather.replace();
+            fetchNearbyDoctors();
+        });
+
+        function fetchNearbyDoctors() {
+            const container = document.getElementById('doctors-list-container');
+            const loadingText = document.getElementById('loading-text');
+
+            if (!navigator.geolocation) {
+                loadingText.textContent = 'Geolocation is not supported by your browser.';
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(async (position) => {
+                const { latitude, longitude } = position.coords;
+                try {
+                    const response = await fetch(`http://127.0.0.1:5000/doctors?lat=${latitude}&lon=${longitude}`, { credentials: 'include' });
+                    if (!response.ok) throw new Error('Failed to fetch doctors.');
+                    
+                    const doctors = await response.json();
+                    
+                    loadingText.style.display = 'none';
+                    if (doctors.length === 0) {
+                        container.innerHTML = '<p class="text-center text-gray-400">No doctors found nearby.</p>';
+                        return;
+                    }
+
+                    doctors.forEach(doctor => {
+                        const doctorCard = `
+                            <div class="doctor-card flex flex-col md:flex-row items-center gap-6">
+                                <img src="https://i.pravatar.cc/150?u=${doctor._id}" alt="Dr. ${doctor.name}" class="w-32 h-32 rounded-full border-4 border-purple-400">
+                                <div class="flex-grow text-center md:text-left">
+                                    <h2 class="text-2xl font-bold">${doctor.name}</h2>
+                                    <p class="text-purple-300 font-semibold">${doctor.specialty}</p>
+                                    <div class="flex items-center justify-center md:justify-start gap-4 mt-2 text-gray-400">
+                                        <span class="flex items-center gap-1"><i data-feather="clock"></i> ${doctor.availability}</span>
+                                        <span class="flex items-center gap-1"><i data-feather="map-pin"></i>~${doctor.distance.toFixed(2)} km away</span>
+                                    </div>
+                                </div>
+                                <div class="text-center">
+                                    <p class="text-3xl font-bold text-white">₹${doctor.price}</p>
+                                    <p class="text-sm text-gray-500">per session</p>
+                                    <button onclick="startVideoCall('${doctor._id}')" class="btn-call mt-3">
+                                        <i data-feather="video" class="inline-block -ml-1 mr-1 h-5 w-5"></i>Start Video Call
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                        container.insertAdjacentHTML('beforeend', doctorCard);
+                    });
+                    feather.replace();
+                } catch (error) {
+                    loadingText.textContent = `Error: ${error.message}. Could not load doctors.`;
+                }
+            }, () => {
+                loadingText.textContent = 'Unable to retrieve your location. Please allow location access.';
+            });
+        }
+
+        async function startVideoCall(doctorId) {
+            try {
+                const response = await fetch(`http://127.0.0.1:5000/start_video_call`, { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ doctor_id: doctorId }),
+                    credentials: 'include' 
+                });
+                if (!response.ok) throw new Error('Could not initiate call.');
+                
+                const data = await response.json();
+                window.open(data.url, '_blank');
+            } catch (error) {
+                alert(`Error starting video call: ${error.message}`);
+            }
+        }
+    </script>
+</body>
+</html>

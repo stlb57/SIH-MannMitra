@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MannMitra Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/feather-icons"></script>
+    
+    <script>
+        // Theme switcher logic to prevent flash of wrong theme
+        if (localStorage.theme === 'light' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: light)').matches)) {
+            document.documentElement.classList.remove('dark');
+        } else {
+            document.documentElement.classList.add('dark');
+        }
+    </script>
+    
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #f0f2f5; /* Light mode bg */
+            color: #1e293b;
+        }
+        .dark body {
+            background-color: #0b1120; /* Dark mode bg */
+            color: #e2e8f0;
+        }
+        /* Aurora Background Effect */
+        .aurora-background {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            overflow: hidden;
+            z-index: -1;
+        }
+        .aurora-background::before, .aurora-background::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 800px;
+            height: 800px;
+            border-radius: 50%;
+            filter: blur(150px);
+            opacity: 0.15;
+            animation: move-glow 20s linear infinite;
+            will-change: transform;
+        }
+        .dark .aurora-background::before { background: radial-gradient(circle, #581c87, transparent 60%); }
+        .dark .aurora-background::after { background: radial-gradient(circle, #155e75, transparent 60%); animation-delay: -10s; }
+        /* Using .light class on html for light mode aurora */
+        html:not(.dark) .aurora-background::before { background: radial-gradient(circle, #a855f7, transparent 60%); opacity: 0.1; }
+        html:not(.dark) .aurora-background::after { background: radial-gradient(circle, #06b6d4, transparent 60%); animation-delay: -10s; opacity: 0.1; }
+        
+        @keyframes move-glow {
+            0% { transform: translate(-50%, -50%) rotate(0deg) translateX(30%); }
+            50% { transform: translate(-50%, -50%) rotate(180deg) translateX(30%); }
+            100% { transform: translate(-50%, -50%) rotate(360deg) translateX(30%); }
+        }
+
+        /* Glassmorphic Card Style */
+        .card {
+            background-color: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+        .dark .card {
+            background-color: rgba(29, 39, 58, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 30px rgba(0,0,0,0.1);
+        }
+        /* SVG Progress Ring */
+        .progress-ring-circle {
+            transition: stroke-dashoffset 0.8s ease-out;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+         /* Custom styles for the breathing animation */
+         .breathing-circle {
+            width: 150px;
+            height: 150px;
+            background-color: #8b5cf6;
+            border-radius: 50%;
+            margin: 20px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            animation: breathe 8s ease-in-out infinite;
+        }
+        @keyframes breathe {
+            0% { transform: scale(0.8); }
+            50% { transform: scale(1); }
+            100% { transform: scale(0.8); }
+        }
+    </style>
+</head>
+<body class="min-h-screen antialiased">
+    <div class="aurora-background"></div>
+
+    <div class="relative w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+        <header class="flex justify-between items-center py-4 mb-10">
+            <h1 class="text-2xl font-bold text-slate-800 dark:text-white">MannMitra</h1>
+            <div class="flex items-center gap-4">
+                <nav id="nav-menu" class="flex items-center gap-4 text-sm font-semibold"></nav>
+                <button id="theme-toggle" class="w-10 h-10 rounded-full flex items-center justify-center bg-white/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 backdrop-blur-sm border border-white/20 dark:border-white/10 hover:bg-white/80 dark:hover:bg-slate-800/80 transition-colors">
+                    <i data-feather="sun" class="hidden dark:block"></i>
+                    <i data-feather="moon" class="block dark:hidden"></i>
+                </button>
+            </div>
+        </header>
+
+        <main class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
+            <div class="card md:col-span-2 lg:col-span-2 lg:row-span-2 rounded-2xl p-8 flex flex-col items-center justify-center text-center">
+                <h2 class="text-2xl font-bold mb-1 text-slate-900 dark:text-white">Wellness Overview</h2>
+                <p id="overview-date" class="text-sm text-slate-500 dark:text-slate-400 mb-8"></p>
+                <div class="relative w-48 h-48">
+                    <svg class="w-full h-full" viewBox="0 0 100 100">
+                        <circle class="text-slate-200 dark:text-slate-700" stroke-width="8" stroke="currentColor" fill="transparent" r="42" cx="50" cy="50" />
+                        <circle id="progress-ring" class="progress-ring-circle text-purple-500" stroke-width="8" stroke-linecap="round" stroke="currentColor" fill="transparent" r="42" cx="50" cy="50" />
+                    </svg>
+                    <div id="status-text" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-2xl font-extrabold text-slate-800 dark:text-white">...</div>
+                </div>
+                <div id="frequency-details" class="text-sm text-slate-500 dark:text-slate-400 mt-6 max-w-xs">Loading report...</div>
+            </div>
+            
+            <div class="card rounded-2xl p-6 flex flex-col">
+                <h2 class="text-xl font-bold text-slate-900 dark:text-white">AI Companion</h2>
+                <p class="text-sm text-slate-500 dark:text-slate-400 mt-2 flex-grow">A safe space to explore your thoughts and feelings.</p>
+                <div class="mt-6 space-y-3">
+                    <a href="chat.html" class="block w-full text-center font-semibold bg-slate-800 dark:bg-white text-white dark:text-slate-900 py-3 px-6 rounded-lg hover:bg-slate-700 dark:hover:bg-slate-200 transition-colors no-underline">Start Chat</a>
+                    <a href="checkin.html" class="block w-full text-center font-semibold bg-white/80 dark:bg-slate-800/50 backdrop-blur-sm border border-white/20 dark:border-white/10 text-slate-700 dark:text-slate-300 py-3 px-6 rounded-lg hover:bg-white dark:hover:bg-slate-800 transition-colors no-underline">Daily Check-In</a>
+                </div>
+            </div>
+
+            <div class="card rounded-2xl p-6">
+                <h2 class="text-xl font-bold mb-4 text-slate-900 dark:text-white">Quick Tools</h2>
+                <div class="grid grid-cols-2 gap-4 text-center">
+                    <div id="breathing-btn" class="cursor-pointer group flex flex-col items-center gap-2 p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                        <div class="w-12 h-12 rounded-full flex items-center justify-center text-slate-500 dark:text-slate-400 group-hover:text-sky-500 transition-colors"><i data-feather="wind" class="w-6 h-6"></i></div>
+                        <p class="text-xs font-semibold text-slate-700 dark:text-slate-300">Breathing</p>
+                    </div>
+                    <div id="white-noise-btn" class="cursor-pointer group flex flex-col items-center gap-2 p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                        <div class="w-12 h-12 rounded-full flex items-center justify-center text-slate-500 dark:text-slate-400 group-hover:text-slate-500 transition-colors"><i data-feather="headphones" class="w-6 h-6"></i></div>
+                        <p class="text-xs font-semibold text-slate-700 dark:text-slate-300">Audio</p>
+                    </div>
+                    <div id="motivation-btn" class="cursor-pointer group flex flex-col items-center gap-2 p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                        <div class="w-12 h-12 rounded-full flex items-center justify-center text-slate-500 dark:text-slate-400 group-hover:text-amber-500 transition-colors"><i data-feather="sun" class="w-6 h-6"></i></div>
+                        <p class="text-xs font-semibold text-slate-700 dark:text-slate-300">Motivation</p>
+                    </div>
+                    <div id="quote-btn" class="cursor-pointer group flex flex-col items-center gap-2 p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                        <div class="w-12 h-12 rounded-full flex items-center justify-center text-slate-500 dark:text-slate-400 group-hover:text-emerald-500 transition-colors"><i data-feather="message-circle" class="w-6 h-6"></i></div>
+                        <p class="text-xs font-semibold text-slate-700 dark:text-slate-300">Quote</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card rounded-2xl p-6 flex flex-col">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-slate-900 dark:text-white">Goals & Settings</h2>
+                    <button onclick="openGoalModal()" class="w-10 h-10 rounded-full flex items-center justify-center bg-slate-800 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-700 dark:hover:bg-slate-200 transition-colors text-2xl font-light">+</button>
+                </div>
+                <div id="goals-list" class="space-y-4 flex-grow my-2"></div>
+                <div class="mt-auto border-t border-white/20 dark:border-white/10 pt-4">
+                     <button onclick="openContactsModal()" class="w-full text-center font-semibold bg-white/80 dark:bg-slate-800/50 backdrop-blur-sm border border-white/20 dark:border-white/10 text-slate-700 dark:text-slate-300 py-3 px-6 rounded-lg hover:bg-white dark:hover:bg-slate-800 transition-colors">Emergency Contacts</button>
+                </div>
+            </div>
+
+            <div class="card rounded-2xl p-6 flex flex-col">
+                 <h2 class="text-xl font-bold text-slate-900 dark:text-white">Your Journey</h2>
+                <div id="accomplishment-summary" class="flex-grow flex flex-col items-center justify-center text-center my-2"></div>
+                <div class="mt-auto border-t border-white/20 dark:border-white/10 pt-4">
+                    <a href="final.html" class="block w-full text-center font-semibold bg-white/80 dark:bg-slate-800/50 backdrop-blur-sm border border-white/20 dark:border-white/10 text-slate-700 dark:text-slate-300 py-3 px-6 rounded-lg hover:bg-white dark:hover:bg-slate-800 transition-colors no-underline">View All Rewards</a>
+                </div>
+            </div>
+
+            <div class="card md:col-span-2 lg:col-span-4 rounded-2xl p-8 flex flex-col lg:flex-row gap-8">
+                <div class="lg:w-1/2">
+                     <h2 class="text-xl font-bold mb-4 text-slate-900 dark:text-white">Professional Help</h2>
+                     <div id="nearby-doctors-list" class="space-y-3">
+                         <p id="doctors-loading-text" class="text-slate-500 dark:text-slate-400 text-sm">Checking for doctors nearby...</p>
+                     </div>
+                     <a href="doctors.html" class="block mt-4 w-full text-center font-semibold bg-white/80 dark:bg-slate-800/50 backdrop-blur-sm border border-white/20 dark:border-white/10 text-slate-700 dark:text-slate-300 py-3 px-6 rounded-lg hover:bg-white dark:hover:bg-slate-800 transition-colors no-underline">Find a Professional</a>
+                </div>
+                <div class="hidden lg:block border-l border-white/20 dark:border-white/10"></div>
+                <div class="lg:w-1/2">
+                    <h2 class="text-xl font-bold mb-4 text-red-500/90">Emergency SOS</h2>
+                    <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">If you are in immediate distress, please reach out. You are not alone.</p>
+                    <button onclick="showEmergencyModal()" class="w-full text-center font-semibold bg-red-500/10 dark:bg-red-500/10 border-2 border-red-500 text-red-500 py-3 px-6 rounded-lg hover:bg-red-500 hover:text-white transition-colors">Open SOS Panel</button>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <div id="emergency-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white dark:bg-slate-900/80 backdrop-blur-xl p-8 rounded-2xl max-w-md w-full text-center border border-white/20 dark:border-white/10">
+            <div id="sos-main-view">
+                <h2 class="text-2xl font-bold text-red-500 mb-4">Immediate Support</h2>
+                <p class="text-slate-600 dark:text-slate-400 mb-6">Use these resources or alert your contacts.</p>
+                <div class="text-left space-y-4">
+                    <p><strong class="text-slate-900 dark:text-white">AASRA (24x7):</strong> <a href="tel:9820466726" class="text-slate-600 dark:text-slate-300 hover:underline">9820466726</a></p>
+                    <p><strong class="text-slate-900 dark:text-white">Vandrevala Fdn:</strong> <a href="tel:9999666555" class="text-slate-600 dark:text-slate-300 hover:underline">9999666555</a></p>
+                </div>
+                <button onclick="showSosConfirmView()" class="w-full mt-8 bg-red-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-red-600 transition-colors">Alert My Close Contacts</button>
+                <button onclick="hideEmergencyModal()" class="mt-4 text-sm font-semibold text-slate-600 dark:text-slate-400 py-2 px-6">Close</button>
+            </div>
+            <div id="sos-confirm-view" class="hidden">
+                 <h2 class="text-2xl font-bold text-amber-500 mb-4">Are You Sure?</h2>
+                 <p class="text-slate-600 dark:text-slate-400 mb-6">This will send an SMS to your contacts.</p>
+                 <div class="flex gap-4 justify-center">
+                    <button onclick="showSosMainView()" class="font-semibold py-2 px-8 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">Cancel</button>
+                    <button onclick="sendSosAlert()" class="font-bold py-2 px-8 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors">Yes, Alert Them</button>
+                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="contacts-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white dark:bg-slate-900/80 backdrop-blur-xl p-8 rounded-2xl max-w-lg w-full border border-white/20 dark:border-white/10">
+            <h2 class="text-2xl font-bold mb-4 text-slate-900 dark:text-white">Manage Emergency Contacts</h2>
+            <p class="text-slate-600 dark:text-slate-400 mb-6">Add people you trust to be notified when you use the SOS alert feature. They will receive an SMS message.</p>
+            <form id="add-contact-form" class="flex flex-col sm:flex-row gap-3 mb-6">
+                <input id="contact-name" type="text" placeholder="Contact's Name" class="w-full sm:w-1/2 bg-slate-100 dark:bg-slate-800 rounded-lg p-3 border-transparent focus:ring-2 focus:ring-purple-500 focus:outline-none" required>
+                <input id="contact-phone" type="tel" placeholder="Phone Number (+91...)" class="w-full sm:w-1/2 bg-slate-100 dark:bg-slate-800 rounded-lg p-3 border-transparent focus:ring-2 focus:ring-purple-500 focus:outline-none" required>
+                <button type="submit" class="bg-emerald-500 text-white font-semibold px-5 rounded-lg hover:bg-emerald-600 transition-colors">Add</button>
+            </form>
+            <h3 class="font-semibold mb-3 text-slate-900 dark:text-white">Your Contacts:</h3>
+            <div id="contacts-list" class="space-y-2 max-h-40 overflow-y-auto"></div>
+            <button onclick="closeContactsModal()" class="w-full mt-8 bg-slate-200 dark:bg-slate-700 font-semibold py-3 px-6 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">Done</button>
+        </div>
+    </div>
+    
+    <div id="goal-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white dark:bg-slate-900/80 backdrop-blur-xl p-8 rounded-2xl max-w-md w-full border border-white/20 dark:border-white/10">
+            <h2 class="text-2xl font-bold mb-4 text-slate-900 dark:text-white">Set a New Goal</h2>
+            <form id="goal-form">
+                <textarea id="goal-text" rows="3" class="w-full bg-slate-100 dark:bg-slate-800 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="e.g., Go for a 15 minute walk today" required></textarea>
+                <div class="mt-4"><label for="goal-time" class="block font-semibold mb-2 text-sm text-slate-700 dark:text-slate-300">Set a reminder time (optional):</label><input type="time" id="goal-time" class="w-full bg-slate-100 dark:bg-slate-800 rounded-lg p-3"></div>
+                <div class="flex justify-end gap-4 mt-6">
+                    <button type="button" onclick="closeGoalModal()" class="font-semibold py-2 px-6 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">Cancel</button>
+                    <button type="submit" class="font-semibold py-2 px-6 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 transition-colors">Add Goal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="support-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white dark:bg-slate-900/80 backdrop-blur-xl p-8 rounded-2xl max-w-lg w-11/12 text-center border border-white/20 dark:border-white/10">
+            <h2 id="support-modal-title" class="text-2xl font-bold text-purple-500 mb-6"></h2>
+            <div id="support-modal-content" class="text-slate-600 dark:text-slate-400 mb-8"></div>
+            <button onclick="closeSupportModal()" class="w-full mt-4 bg-slate-200 dark:bg-slate-700 font-semibold py-3 px-6 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">Close</button>
+        </div>
+    </div>
+    
+    <script>
+        // --- INITIALIZATION ---
+        feather.replace();
+        document.getElementById('overview-date').textContent = new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' });
+        
+        // --- CORE MODAL AND DATA FUNCTIONS ---
+        const goalModal = document.getElementById('goal-modal');
+        function openGoalModal() { goalModal.classList.remove('hidden'); }
+        function closeGoalModal() { goalModal.classList.add('hidden'); }
+        function showEmergencyModal() { document.getElementById('emergency-modal').classList.remove('hidden'); }
+        
+        document.addEventListener('DOMContentLoaded', async () => { await checkUserStatusAndLoadData(); });
+
+        async function checkUserStatusAndLoadData() {
+            const navMenu = document.getElementById('nav-menu');
+            try {
+                const response = await fetch('http://127.0.0.1:5000/@me', { credentials: 'include' });
+                if (!response.ok) throw new Error('Not logged in');
+                const user = await response.json();
+                navMenu.innerHTML = `<span class="hidden sm:block">Welcome, ${user.username}</span><button onclick="logout()" class="font-semibold text-sm bg-white/50 dark:bg-slate-800/50 py-2 px-4 rounded-full hover:bg-white/80 dark:hover:bg-slate-800/80 backdrop-blur-sm border border-white/20 dark:border-white/10 transition-colors">Logout</button>`;
+                Notification.requestPermission();
+                await Promise.all([
+                    updateMentalHealthScore(),
+                    fetchAndDisplayGoals(),
+                    fetchAndDisplayNearbyDoctors(),
+                    fetchAndDisplayAccomplishments()
+                ]);
+            } catch (error) { window.location.href = 'login.html'; }
+        }
+        
+        async function fetchAndDisplayAccomplishments() {
+            const summaryContainer = document.getElementById('accomplishment-summary');
+            try {
+                const response = await fetch('http://127.0.0.1:5000/get_my_activity_stats', { credentials: 'include' });
+                if (!response.ok) throw new Error("Could not fetch stats");
+                const stats = await response.json();
+                const chatCount = stats.chat_count || 0; const checkinCount = stats.checkin_count || 0;
+                const badges = [{ name: "First Step", icon: "🌟", unlocked: chatCount >= 1 },{ name: "Mindful Moment", icon: "🧘", unlocked: checkinCount >= 1 },{ name: "Deep Thinker", icon: "💬", unlocked: chatCount >= 5 },{ name: "Consistent Soul", icon: "📅", unlocked: checkinCount >= 5 },{ name: "Explorer", icon: "🗺️", unlocked: chatCount >= 10 },{ name: "Habit Builder", icon: "🌱", unlocked: checkinCount >= 10 },{ name: "Dedicated", icon: "🤝", unlocked: chatCount >= 5 && checkinCount >= 5 },{ name: "Veteran", icon: "🛡️", unlocked: chatCount >= 25 }];
+                const unlockedBadges = badges.filter(badge => badge.unlocked);
+                const unlockedCount = unlockedBadges.length;
+                if (unlockedCount === 0) {
+                    summaryContainer.innerHTML = `<div class="text-5xl mb-2">🚀</div><p class="font-bold">Start Your Journey</p><p class="text-xs text-slate-500 dark:text-slate-400">Unlock rewards by chatting and checking-in.</p>`;
+                } else {
+                    const mostRecentBadge = unlockedBadges[unlockedCount - 1];
+                    summaryContainer.innerHTML = `<p class="text-slate-500 dark:text-slate-400 text-sm font-semibold">Most Recent Badge</p><div class="text-6xl my-2">${mostRecentBadge.icon}</div><p class="font-bold">${mostRecentBadge.name}</p><p class="text-xs text-slate-500 dark:text-slate-400 mt-2 font-semibold">${unlockedCount} / ${badges.length} Badges Unlocked</p>`;
+                }
+            } catch (error) { summaryContainer.innerHTML = `<p class="text-red-500">Could not load rewards.</p>`; }
+        }
+
+        async function logout() { await fetch('http://127.0.0.1:5000/logout', { credentials: 'include' }); window.location.href = 'login.html'; }
+
+        async function updateMentalHealthScore() {
+            const statusText = document.getElementById('status-text');
+            const frequencyDetails = document.getElementById('frequency-details');
+            const progressRing = document.getElementById('progress-ring');
+            const radius = progressRing.r.baseVal.value;
+            const circumference = 2 * Math.PI * radius;
+            progressRing.style.strokeDasharray = `${circumference} ${circumference}`;
+
+            try {
+                const response = await fetch('http://127.0.0.1:5000/get_my_report', { credentials: 'include' });
+                const report = await response.json();
+                
+                statusText.textContent = report.status || 'No Data';
+                
+                let frequencyText = "";
+                const allFrequencies = {...report.frequency, ...report.checkin_frequency};
+                if (Object.keys(allFrequencies).length > 0) { for (const item in allFrequencies) { frequencyText += `${item}(${allFrequencies[item]}) `; } } else { frequencyText = "Chat or Check-in to build your report."; }
+                frequencyDetails.textContent = frequencyText;
+
+                const score = report.score || 0;
+                // Map score from a range of -10 to 10 onto a 0-100 percentage
+                const scorePercentage = Math.max(0, Math.min(100, ((score + 10) / 20) * 100));
+                const offset = circumference - (scorePercentage / 100) * circumference;
+                progressRing.style.strokeDashoffset = offset;
+
+            } catch (error) {
+                statusText.textContent = "Error";
+                progressRing.style.strokeDashoffset = circumference; // Set to 0% on error
+            }
+        }
+        
+        async function fetchAndDisplayNearbyDoctors() {
+            const listContainer = document.getElementById('nearby-doctors-list'); const loadingText = document.getElementById('doctors-loading-text');
+            if (!navigator.geolocation) { loadingText.textContent = 'Location access is disabled.'; return; }
+            navigator.geolocation.getCurrentPosition(async (position) => {
+                const { latitude, longitude } = position.coords;
+                try {
+                    const response = await fetch(`http://127.0.0.1:5000/doctors?lat=${latitude}&lon=${longitude}&limit=2`, { credentials: 'include' });
+                    if (!response.ok) throw new Error();
+                    const doctors = await response.json(); 
+                    listContainer.innerHTML = '';
+                    if (doctors.length === 0) { listContainer.innerHTML = '<p class="text-sm text-slate-500 dark:text-slate-400">No doctors found in your immediate area.</p>'; } 
+                    else { doctors.forEach(doctor => { listContainer.insertAdjacentHTML('beforeend', `<div class="flex items-center justify-between p-3 bg-slate-100/50 dark:bg-slate-800/50 rounded-xl"><div><p class="font-semibold text-sm text-slate-800 dark:text-slate-200">${doctor.name}</p><p class="text-xs text-slate-500 dark:text-slate-400">~${doctor.distance.toFixed(1)} km away</p></div><span class="text-xs bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300 rounded-full px-2 py-1 font-semibold">${doctor.specialty.split(' ')[0]}</span></div>`); }); }
+                } catch (error) { listContainer.innerHTML = '<p class="text-sm text-red-500">Could not load doctors.</p>'; }
+            }, () => { loadingText.textContent = 'Please enable location to see doctors.'; });
+        }
+        
+        async function fetchAndDisplayGoals() {
+            const goalsList = document.getElementById('goals-list');
+            try {
+                const response = await fetch('http://127.0.0.1:5000/goals', { credentials: 'include' });
+                const goals = await response.json();
+                if (goals.length === 0) {
+                    goalsList.innerHTML = `<p class="text-sm text-center text-slate-500 dark:text-slate-400 py-4">No goals set yet. Click '+' to add one!</p>`;
+                } else {
+                    goalsList.innerHTML = '';
+                    goals.forEach(goal => {
+                        const goalElement = document.createElement('div');
+                        let timeInfo = goal.reminderTime ? `<span class="text-xs text-slate-500 dark:text-slate-400">Reminder at ${goal.reminderTime}</span>` : '';
+                        goalElement.innerHTML = `<div class="flex items-center justify-between mb-1"><p class="text-sm font-medium text-slate-800 dark:text-slate-200">${goal.text}</p>${timeInfo}</div><div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2"><div class="bg-emerald-500 h-2 rounded-full" style="width: ${goal.progress}%"></div></div>`;
+                        goalsList.appendChild(goalElement);
+                    });
+                }
+            } catch (error) { goalsList.innerHTML = `<p class="text-sm text-red-500">Could not load goals.</p>`; }
+        }
+
+        document.getElementById('goal-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const goalText = document.getElementById('goal-text').value;
+            const goalTime = document.getElementById('goal-time').value;
+            if (!goalText.trim()) return;
+            await fetch('http://127.0.0.1:5000/goals', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: goalText, time: goalTime }), credentials: 'include' });
+            if (goalTime) { scheduleNotification(goalText, goalTime); }
+            document.getElementById('goal-form').reset();
+            closeGoalModal();
+            await fetchAndDisplayGoals();
+        });
+
+        function scheduleNotification(goalText, goalTime) {
+            const [hours, minutes] = goalTime.split(':').map(Number);
+            const now = new Date();
+            let reminderDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0);
+            if (reminderDate < now) { reminderDate.setDate(reminderDate.getDate() + 1); }
+            const delay = reminderDate.getTime() - now.getTime();
+            if (delay > 0) { setTimeout(() => { new Notification('MannMitra Goal Reminder', { body: `Time for your goal: "${goalText}"` }); }, delay); }
+        }
+
+        const supportModal = document.getElementById('support-modal'); const supportModalTitle = document.getElementById('support-modal-title'); const supportModalContent = document.getElementById('support-modal-content');
+        function openSupportModal(title, contentHTML) { supportModalTitle.textContent = title; supportModalContent.innerHTML = contentHTML; supportModal.classList.remove('hidden'); }
+        function closeSupportModal() { const audioPlayer = supportModalContent.querySelector('audio'); if (audioPlayer) { audioPlayer.pause(); } supportModal.classList.add('hidden'); }
+        function showRandomQuote() { const quotes = ["The best way to get started is to quit talking and begin doing. - Walt Disney", "The pessimist sees difficulty in every opportunity. The optimist sees opportunity in every difficulty. - Winston Churchill"]; openSupportModal("Quote of the Moment", `<p class="text-xl italic">"${quotes[Math.floor(Math.random() * quotes.length)]}"</p>`); }
+        function showMotivationalAnalogy() { const analogies = [{ title: "The Oak Tree", text: "A mighty storm came... resilience is not about being rigid, but about being flexible." }, { title: "The Potter's Clay", text: "You are like clay... it is through this pressure that you are shaped into something beautiful and strong." }]; const analogy = analogies[Math.floor(Math.random() * analogies.length)]; openSupportModal("A Motivational Analogy", `<h3 class="text-lg font-semibold text-emerald-500 mb-2">${analogy.title}</h3><p>${analogy.text}</p>`); }
+        function showBreathingExercise() { openSupportModal("Guided Breathing", `<p class="mb-4">Follow the circle. Breathe in as it expands, and breathe out as it contracts.</p><div class="breathing-circle"><span id="breathing-text">Breathe In...</span></div>`); const textEl = document.getElementById('breathing-text'); let interval = setInterval(() => { setTimeout(() => { if(textEl) textEl.textContent = "Breathe Out..."; }, 4000); setTimeout(() => { if(textEl) textEl.textContent = "Breathe In..."; }, 8000); }, 8000); setTimeout(() => { if(textEl) textEl.textContent = "Breathe Out..."; }, 4000); }
+        function showWhiteNoise() { const noises = [{ name: "Brown Noise", url: "https://upload.wikimedia.org/wikipedia/commons/4/4c/Brown-noise-10-seconds.ogg" }]; const noise = noises[0]; openSupportModal("Audio Player", `<p class="mb-4">Playing: <strong>${noise.name}</strong></p><audio controls autoplay loop class="w-full"></audio>`); document.querySelector('#support-modal audio').src = noise.url; }
+        document.getElementById('quote-btn').addEventListener('click', showRandomQuote); document.getElementById('motivation-btn').addEventListener('click', showMotivationalAnalogy); document.getElementById('breathing-btn').addEventListener('click', showBreathingExercise); document.getElementById('white-noise-btn').addEventListener('click', showWhiteNoise);
+        
+        const contactsModal = document.getElementById('contacts-modal'); const contactsList = document.getElementById('contacts-list'); const addContactForm = document.getElementById('add-contact-form');
+        function openContactsModal() { contactsModal.classList.remove('hidden'); fetchAndDisplayContacts(); }
+        function closeContactsModal() { contactsModal.classList.add('hidden'); }
+        async function fetchAndDisplayContacts() {
+            try {
+                const response = await fetch('http://127.0.0.1:5000/contacts', { credentials: 'include' });
+                const contacts = await response.json(); contactsList.innerHTML = '';
+                if (contacts.length === 0) { contactsList.innerHTML = '<p class="text-slate-500 dark:text-slate-400">No contacts added yet.</p>'; return; }
+                contacts.forEach(contact => { const el = document.createElement('div'); el.className = 'flex justify-between items-center bg-slate-100/50 dark:bg-slate-800/50 p-2 rounded-lg'; el.innerHTML = `<span class="text-sm font-medium">${contact.name} - ${contact.phone}</span><button onclick="deleteContact('${contact._id}')" class="text-sm text-red-500 hover:text-red-400 font-semibold">Remove</button>`; contactsList.appendChild(el); });
+            } catch (error) { contactsList.innerHTML = '<p class="text-red-500">Could not load contacts.</p>'; }
+        }
+        addContactForm.addEventListener('submit', async (e) => { e.preventDefault(); const name = document.getElementById('contact-name').value; const phone = document.getElementById('contact-phone').value; await fetch('http://127.0.0.1:5000/contacts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, phone }), credentials: 'include' }); addContactForm.reset(); fetchAndDisplayContacts(); });
+        async function deleteContact(contactId) { if (confirm('Are you sure you want to remove this contact?')) { await fetch(`http://127.0.0.1:5000/contacts/${contactId}`, { method: 'DELETE', credentials: 'include' }); fetchAndDisplayContacts(); } }
+        
+        const sosMainView = document.getElementById('sos-main-view'); const sosConfirmView = document.getElementById('sos-confirm-view');
+        function showSosConfirmView() { sosMainView.classList.add('hidden'); sosConfirmView.classList.remove('hidden'); }
+        function showSosMainView() { sosConfirmView.classList.add('hidden'); sosMainView.classList.remove('hidden'); }
+        function hideEmergencyModal() { document.getElementById('emergency-modal').classList.add('hidden'); setTimeout(showSosMainView, 200); }
+        async function sendSosAlert() {
+            try {
+                const response = await fetch('http://127.0.0.1:5000/sos-alert', { method: 'POST', credentials: 'include' });
+                const result = await response.json(); alert(result.message || 'Alert triggered!'); hideEmergencyModal();
+            } catch (error) { alert('An error occurred. Could not send alerts.'); }
+        }
+
+        // --- THEME-SWITCHER LOGIC ---
+        const themeToggle = document.getElementById('theme-toggle');
+        themeToggle.addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+            if (document.documentElement.classList.contains('dark')) {
+                localStorage.theme = 'dark';
+            } else {
+                localStorage.theme = 'light';
+            }
+        });
+    </script>
+</body>
+</html>

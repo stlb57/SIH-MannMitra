@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - MannMitra</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style> 
+        body { font-family: 'Inter', sans-serif; background-color: #0b1120; color: #e2e8f0; } 
+        .card { background-color: rgba(29, 39, 58, 0.5); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        @keyframes pulse { 50% { opacity: .5; } }
+        .animate-pulse-fast { animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    </style>
+</head>
+<body class="p-4 md:p-8 antialiased">
+    <div class="max-w-7xl mx-auto">
+        <header class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-3xl font-bold text-red-500">Admin Portal</h1>
+                <p id="welcome-admin" class="text-gray-400"></p>
+            </div>
+            <button id="logout-btn" class="bg-slate-800/50 hover:bg-slate-700/50 text-white font-semibold py-2 px-4 rounded-full backdrop-blur-sm border border-white/10">Logout</button>
+        </header>
+
+        <div id="alerts-container" class="card mb-8 hidden rounded-2xl p-4">
+            <h2 class="text-xl font-semibold text-yellow-400 mb-3">⚠️ Priority Alerts</h2>
+            <div id="alerts-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                </div>
+        </div>
+
+        <div class="card p-6 rounded-2xl">
+            <h2 class="text-xl font-semibold mb-4">Student Wellness Reports</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="border-b border-white/10">
+                            <th class="p-3">Username</th>
+                            <th class="p-3">Last Intensity</th>
+                            <th class="p-3">Last Type</th>
+                            <th class="p-3">Last Activity</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reports-table-body">
+                        <tr><td colspan="4" class="text-center p-8 text-gray-500">Loading reports...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function fetchAdminData() {
+            try {
+                const meResponse = await fetch('http://127.0.0.1:5000/@me', { credentials: 'include' });
+                if (!meResponse.ok) throw new Error('Not logged in');
+                const user = await meResponse.json();
+                document.getElementById('welcome-admin').textContent = `Logged in as ${user.username}`;
+                
+                const reportsResponse = await fetch('http://127.0.0.1:5000/admin/reports', { credentials: 'include' });
+                if (reportsResponse.status === 403) {
+                    document.querySelector('#reports-table-body').innerHTML = `<tr><td colspan="4" class="text-center p-8 text-red-400">Access Denied. You are not an administrator.</td></tr>`;
+                    return;
+                }
+                if (!reportsResponse.ok) throw new Error('Failed to fetch reports');
+
+                const reports = await reportsResponse.json();
+                const tableBody = document.getElementById('reports-table-body');
+                const alertsContainer = document.getElementById('alerts-container');
+                const alertsList = document.getElementById('alerts-list');
+                
+                tableBody.innerHTML = '';
+                alertsList.innerHTML = '';
+                let alertsFound = 0;
+
+                if (reports.length === 0) {
+                    tableBody.innerHTML = `<tr><td colspan="4" class="text-center p-8 text-gray-500">No student reports found.</td></tr>`;
+                } else {
+                    reports.forEach(report => {
+                        const date = new Date(report.last_timestamp.$date || report.last_timestamp);
+                        const isHighStress = report.last_intensity === 'high' || report.last_intensity === 'mid';
+                        
+                        let rowClass = 'hover:bg-white/5 transition-colors';
+                        let userCellHTML = `<td class="p-3 font-semibold">${report.username}</td>`;
+
+                        if (report.needs_attention) {
+                            alertsFound++;
+                            rowClass = 'bg-red-900/40 hover:bg-red-900/60 transition-colors';
+                            userCellHTML = `
+                                <td class="p-3 font-semibold">
+                                    <span>${report.username}</span>
+                                    <span class="ml-2 text-xs font-bold uppercase bg-red-600 text-white px-2 py-1 rounded-full animate-pulse-fast">Alert</span>
+                                </td>
+                            `;
+                            alertsList.innerHTML += `
+                                <div class="bg-slate-800/50 p-3 rounded-lg border border-white/10">
+                                    <p class="font-bold text-red-400">${report.username}</p>
+                                    <p class="text-sm text-gray-300">Has shown high stress 3+ times this week.</p>
+                                </div>
+                            `;
+                        } else if (isHighStress) {
+                            rowClass = 'bg-red-900/20 hover:bg-red-900/40 transition-colors';
+                        }
+
+                        const row = `
+                            <tr class="border-b border-white/10 ${rowClass}">
+                                ${userCellHTML}
+                                <td class="p-3 font-bold ${isHighStress ? 'text-red-400' : ''}">${report.last_intensity}</td>
+                                <td class="p-3">${report.last_type}</td>
+                                <td class="p-3 text-sm text-gray-400">${date.toLocaleString()}</td>
+                            </tr>
+                        `;
+                        tableBody.innerHTML += row;
+                    });
+
+                    if (alertsFound > 0) {
+                        alertsContainer.classList.remove('hidden');
+                    }
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                window.location.href = 'login.html';
+            }
+        }
+
+        document.getElementById('logout-btn').addEventListener('click', async () => {
+            await fetch('http://127.0.0.1:5000/logout', { credentials: 'include' });
+            window.location.href = 'login.html';
+        });
+
+        document.addEventListener('DOMContentLoaded', fetchAdminData);
+    </script>
+</body>
+</html>

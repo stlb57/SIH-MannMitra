@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - MannMitra</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style> 
+        body { font-family: 'Inter', sans-serif; background-color: #0b1120; color: #e2e8f0; } 
+        .aurora-background { position: fixed; top: 0; left: 0; right: 0; bottom: 0; overflow: hidden; z-index: -1; }
+        .aurora-background::before, .aurora-background::after { content: ''; position: absolute; top: 50%; left: 50%; width: 800px; height: 800px; border-radius: 50%; filter: blur(150px); opacity: 0.15; animation: move-glow 20s linear infinite; }
+        .aurora-background::before { background: radial-gradient(circle, #581c87, transparent 60%); }
+        .aurora-background::after { background: radial-gradient(circle, #155e75, transparent 60%); animation-delay: -10s; }
+        @keyframes move-glow { 0% { transform: translate(-50%, -50%) rotate(0deg) translateX(30%); } 50% { transform: translate(-50%, -50%) rotate(180deg) translateX(30%); } 100% { transform: translate(-50%, -50%) rotate(360deg) translateX(30%); } }
+        .card { background-color: rgba(29, 39, 58, 0.5); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen antialiased">
+    <div class="aurora-background"></div>
+    <div class="card w-full max-w-md p-8 rounded-2xl shadow-lg">
+        <h1 class="text-3xl font-bold text-center text-purple-400 mb-6">Welcome to MannMitra</h1>
+        <form id="login-form">
+            <div class="mb-4">
+                <label for="username" class="block font-semibold mb-2">Username</label>
+                <input type="text" id="username" class="w-full bg-slate-800/50 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-purple-400 border border-white/10" required>
+            </div>
+            <div class="mb-6">
+                <label for="password" class="block font-semibold mb-2">Password</label>
+                <input type="password" id="password" class="w-full bg-slate-800/50 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-purple-400 border border-white/10" required>
+            </div>
+            <p id="error-message" class="text-red-400 text-sm mb-4 text-center"></p>
+            <button type="submit" class="w-full bg-emerald-500 text-white font-semibold text-center py-3 rounded-full hover:bg-emerald-600 transition text-lg">Login</button>
+        </form>
+        <p class="text-center mt-4 text-gray-400">Don't have an account? <a href="register.html" class="text-purple-400 hover:underline">Register here</a></p>
+    </div>
+    <script>
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorMessage = document.getElementById('error-message');
+
+            const response = await fetch('http://127.0.0.1:5000/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password }),
+                credentials: 'include'
+            });
+
+            if (response.ok) {
+                window.location.href = 'index.html';
+            } else {
+                const data = await response.json();
+                errorMessage.textContent = data.error || 'Login failed.';
+            }
+        });
+    </script>
+</body>
+</html>
