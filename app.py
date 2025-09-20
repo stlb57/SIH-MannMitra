@@ -1,8 +1,7 @@
 # app.py
-import certifi
 import os
-import json
 import logging
+import boto3  # <-- Added for S3 integration
 import uuid
 from datetime import datetime, timedelta
 from bson import ObjectId
@@ -16,13 +15,48 @@ from transformers import pipeline
 from chat_agent import initialize_chat_agent
 from twilio.rest import Client
 
-# --- App Initialization & Configuration ---
+# --- App Initialization & Basic Configuration ---
+# Configure logging to see output in Elastic Beanstalk logs
 logging.basicConfig(level=logging.INFO)
 load_dotenv()
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
 CORS(app, supports_credentials=True)
 bcrypt = Bcrypt(app)
+
+# --- Function to Download Models From S3 ---
+# This new function will download your large model files from S3
+# to the server when the application starts.
+def download_models_from_s3():
+    # ⚠️ IMPORTANT: Change this to your unique S3 bucket name
+    bucket_name = 'mannmitra-models-your-unique-name'
+    s3_folder = 'models/'
+    local_dir = './models/'
+
+    # If models directory already exists and has files, skip the download
+    if os.path.exists(local_dir) and os.listdir(local_dir):
+        logging.info("Models directory already populated. Skipping S3 download.")
+        return
+
+    logging.info(f"Downloading models from S3 bucket: {bucket_name}")
+    s3 = boto3.client('s3')
+    paginator = s3.get_paginator('list_objects_v2')
+    pages = paginator.paginate(Bucket=bucket_name, Prefix=s3_folder)
+
+    os.makedirs(local_dir, exist_ok=True)
+
+    for page in pages:
+        for obj in page.get('Contents', []):
+            key = obj['Key']
+            # Don't try to download the folder placeholder itself
+            if not key.endswith('/'):
+                # Construct the full local path
+                local_file_path = os.path.join(local_dir, os.path.basename(key))
+                logging.info(f"Downloading s3://{bucket_name}/{key} to {local_file_path}")
+                s3.download_file(bucket_name, key, local_file_path)
+
+    logging.info("All models downloaded successfully from S3.")
+
 
 # --- Twilio Configuration ---
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
@@ -54,7 +88,7 @@ def setup_doctors():
         ]
         doctors_collection.insert_many(mock_doctors)
         logging.info("Mock doctors inserted.")
-    
+
     if "location_2dsphere" not in doctors_collection.index_information():
         doctors_collection.create_index([("location", "2dsphere")], name="location_2dsphere")
         logging.info("Created 2dsphere index on doctors collection.")
@@ -83,7 +117,9 @@ def load_user(user_id):
 chat_agent, system_prompt, type_classifier, intensity_classifier = None, None, None, None
 try:
     logging.info("Initializing All Models...")
+    download_models_from_s3()  # <<<--- THIS IS THE CRITICAL NEW STEP
     chat_agent, system_prompt = initialize_chat_agent()
+    # The pipeline will now find the models in the './models/' directory that was just downloaded.
     type_classifier = pipeline("text-classification", model="./models/final_stress_classifier_model")
     intensity_classifier = pipeline("text-classification", model="./models/final_stress_classifier")
     logging.info("All models initialized successfully.")
@@ -270,5 +306,6 @@ def trigger_sos_alert():
     if errors: return jsonify({"message": f"Alert sent to some contacts, but failed for: {', '.join(errors)}"}), 207
     return jsonify({"message": "SOS alerts sent successfully to all contacts."}), 200
 
+# This part is only for running the app locally for testing
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
